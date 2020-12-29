@@ -1,70 +1,123 @@
-# Getting Started with Create React App
+# React + Express 연동하기
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Install React, Express, body-parser
 
-## Available Scripts
+body-parser : json 데이터로 주고 받기 위해 body-parser도 설치해준다.  
 
-In the project directory, you can run:
+```javascript 
+npx create-react-app react-express 
 
-### `yarn start`
+npm init 
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+npm add express --save
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+npm i body-parser
 
-### `yarn test`
+npm start
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## server.js
 
-### `yarn build`
+Express 사용하기  
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```javascript
+const express = require('express');
+const app = express();
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+const app = express();
+const port =process.env.PORT || 3001;
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+app.use(bodyParser.json());
+app.use('/api', (req, res)=> res.json( { username:'leekeunho' } ));
 
-### `yarn eject`
+app.listen(port, ()=>{
+    console.log(`express is running on ${port}`);
+}) ; 
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## 라우터 설정
+```javascript
+const express = require('express');
+const bodyParser = require('body-parser');
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+let router = express.Router()  ; 
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+router.get('/', (req, res) => {
+  res.send({ name : 'lee keunho' }) ;
+}) ; 
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+module.exports = router ; 
+```
 
-## Learn More
+## 프록시(Proxy) 설정
+프록시는 사전적의미로 '대리'를 뜻함.  
+직접 통신할 수 없는 Client와 Server사이의 중계기 역할로, 네트워크 통신을 대리로 수행하는 것을 의미한다.  
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 설치
+```javascript
+npm i http-proxy-middleware --save
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+setProxy.js 파일을 src 폴더에 생성  
 
-### Code Splitting
+```javascript 
+const proxy = require( 'http-proxy-middleware' ) ;
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+module.exports = ( app ) => {
+  app.use(
+    proxy('/api', {
+      target : 'http://loacalhost:3002/' 
+    })
+  )
+}
+```
 
-### Analyzing the Bundle Size
+## 서버와 리엑트 동시 실행
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+npm 패키지 npm-run-all을 설치하여 실행하면 React와 node.js를 동시에 시작할 수 있다.
 
-### Making a Progressive Web App
+```javascript
+// package.json
+"scripts": {
+  "start": "npm-run-all --parallel start:**",
+  "start:client": "react-scripts start",
+  "start:server": "node ./servers/server.js",
+  "build": "react-scripts build",
+  "test": "react-scripts test",
+  "eject": "react-scripts eject"
+},
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 크로스 오리진 오류
 
-### Advanced Configuration
+서로 다른 포트 번호를 사용하는 웹페이지에서 접근할 경우 보안상 같은 출처의 페이지에서만 접근할 수 있기 때문에 크로스 오리진 오류가 발생한다.  
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### 해결 방법
+cors를 설치하여 server.js파일을 아래처럼 수정한다.
 
-### Deployment
+```javascript
+npm i -D cors
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+// server.js
+app.use(cors()) ; 
+app.use('/api', api );
+```
 
-### `yarn build` fails to minify
+## App.js
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+데이터 받아오기  
+
+```javascript
+function App() {
+  const [ name, setName ] = useState() ; 
+  useEffect(_=>{
+    fetch('http://localhost:3000/api')
+      .then(res=>res.json())
+      .then(data=>setName( data.name ) );
+  })
+  return (
+    <div>{ name }</div>
+  );
+}
+```
+
